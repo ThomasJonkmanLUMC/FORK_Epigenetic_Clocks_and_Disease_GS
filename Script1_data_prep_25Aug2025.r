@@ -13,7 +13,8 @@ library(impute)
 
 
 ### load in Epigenetic Clocks ###
-clock_data <- read.csv("/Cluster_Filespace/Marioni_Group/GS/GS_methylation/Standardised_Data/gs_clocks.csv")
+### NB: this file includes the super-accurate clock developed by Zhang et al. (NOT Zhang_10). --Thomas
+clock_data <- readRDS("file_path/appended_clock_data.rds")
 
 ### load in disease, Covariate and Mortality data  ###
 disease_data <- read.csv("/Cluster_Filespace/Marioni_Group/Riccardo/Christos_17Oct2024/Data/2024-03-29_diseases.csv")
@@ -32,7 +33,7 @@ appt_rds <- readRDS("/Cluster_Filespace/Marioni_Group/Riccardo/Christos_17Oct202
 names(clock_data)[1] <- "DNAm_ID"
 filt_clock_data<- select(clock_data, c(DNAm_ID, Horvathv1, Hannum, Lin, PhenoAge, YingCausAge, YingDamAge,
 									   YingAdaptAge, Horvathv2, Zhang_10, DunedinPoAm38, DunedinPACE, 
-									   DNAmGrimAge, DNAmGrimAge.1, DNAmTL))
+									   DNAmGrimAge, DNAmGrimAge.1, DNAmTL, Zhang_Acc))
 
 
 ### merge appt data to GSK ###
@@ -77,92 +78,41 @@ merged_clock_data_3$t_censor <- ifelse(!is.na(merged_clock_data_3$dod_ym), merge
 merged_clock_data_4 <- subset(merged_clock_data_3, select = - c(ym, dod_ym, GS_yoa, GS_moa, GS_yod, GS_mod, cutoff_minus_GSAPPT, DOD_minus_GSAPPT))
 
 ### read in and merge WBC proportions ###
-wbc <- read.csv("/Cluster_Filespace/Marioni_Group/GS/GS_methylation/Standardised_Data/gs_cell_prop.csv")
-wbc1 <- wbc[,2:ncol(wbc)]
-for(i in 1:ncol(wbc1)){
-wbc1[,i] <- as.numeric(wbc1[,i])
-}
+### Using EpiDISH as it matches our paper --Thomas ###
+WBC_epidish <- readRDS("/Cluster_Filespace/Marioni_Group/GS/GS_methylation/Standardised_Data/EpiDish_WBCs_25Aug2025_REM.rds")
+WBC_epidish <- as.data.frame(WBC_epidish)
+WBC_epidish <- WBC_epidish[,c("Neu", "Eos", "Baso", "Mono", "Bnv", "Bmem", "CD4Tnv", "CD4Tmem", "CD8Tnv", "CD8Tmem", "Treg", "NK")]
+WBC_epidish <- WBC_epidish*100
 
-wbc2 <- t(wbc1)
-colnames(wbc2) <- wbc$X
-wbc3 <- as.data.frame(wbc2)
+### Project PC loadings onto WBC proportions --Thomas ###
+### Please change the load command to the proper file path. --Thomas ###
+load("/path_to_file/PC projection.rda")
+WBC_sc <- scale(WBC_epidish, center = pca.trunc$center, scale = pca.trunc$scale)
+WBC_PCA <- WBC_sc %*% pca.trunc$rotation
+WBC_PCA$DNAm_ID <- row.names(WBC_epidish)
 
-wbc3$DNAm_ID <- as.character(str_sub(rownames(wbc3), start=2))
+### Sanity check: print correlation between PCs and individual WBC fractions and PCs. --Thomas ###
+PC_cor <- cor(WBC_epidish, WBC_PCA)
+print(PC_cor)
+
+### Merge WBCs ###
+merged_clock_data_5 <- merge(merged_clock_data_4, WBC_PCA, by="DNAm_ID", all.x=T)
 
 ### read in the kinship matrix ###
 kinship <- readRDS("/Cluster_Filespace/Marioni_Group/Josie/Proteins/ewas/input_files/kinship_matrix_using_fixed_2022-01-28-pedigree.rds")
 
-### Merge WBCs and calculate AgeAccel residuals for each clock ###
-merged_clock_data_5 <- merge(merged_clock_data_4, wbc3, by="DNAm_ID", all.x=T)
-
-### regress out WBCs and kinship from each clock ###
+### regress out kinship from each clock ### 
+### Note that WBC props are no longer regressed out here! These will be added as covariates to the cox-model instead --Thomas ###
+merged_clock_data_5 <- merged_clock_data_4
 for (i in 3:16){
-merged_clock_data_5[,i] <- resid(lmekin(merged_clock_data_5[,i] ~ age + Bmem + 
-								Bnv + CD4mem + CD4nv + CD8mem + CD8nv + Eos + 
-								Mono + NK + Neu + Treg + (1|merged_clock_data_5$id), 
+merged_clock_data_5[,i] <- resid(lmekin(merged_clock_data_5[,i] ~ age + (1|merged_clock_data_5$id), 
 								varlist = kinship*2, data=merged_clock_data_5, na.action="na.exclude"))
 }
 
-merged_clock_data_6 <- merged_clock_data_5[,-c(22,25,27:38)]
+### Do not remove WBC PCs --Thomas ###
+merged_clock_data_6 <- merged_clock_data_5[,-c(22,25)]
 
-##########################################
-### Sensitivity Analysis - WBC EpiDISH ###
-##########################################
 
-### Calculate WBC proportions via EpiDish ###
-if (!require("BiocManager", quietly = TRUE))
-    install.packages("BiocManager")
-
-BiocManager::install("EpiDISH")
-
-library(EpiDISH)
-
-GS_beta <- readRDS("/Cluster_Filespace/Marioni_Group/GS/GS_methylation/Standardised_Data/Biolearn_GS_18860_17April2025_REM.RDS")
-row.names(GS_beta) <- GS_beta$V1 
-GS_beta <- GS_beta[,-1]
-WBC <- epidish(beta.m = GS_beta, ref.m = cent12CT.m, method = "RPC")$estF
-saveRDS(WBC, file="/Cluster_Filespace/Marioni_Group/GS/GS_methylation/Standardised_Data/EpiDish_WBCs_25Aug2025_REM.rds")
-
-### compare clock residuals with those after regressing out WBCs estimated via EpiDish ###
-
-WBC_epidish <- readRDS("/Cluster_Filespace/Marioni_Group/GS/GS_methylation/Standardised_Data/EpiDish_WBCs_25Aug2025_REM.rds")
-WBC_epidish <- as.data.frame(WBC_epidish)
-WBC_epidish$DNAm_ID <- row.names(WBC_epidish)
-
-merged_clock_data_5a <- merge(merged_clock_data_4, WBC_epidish, by="DNAm_ID", all.x=T)
-
-# regress out EpiDish WBCs and kinship from each clock ###
-for (i in 3:16){
-merged_clock_data_5a[,i] <- resid(lmekin(merged_clock_data_5a[,i] ~ age + 	
-                                 CD4Tnv + CD4Tmem + Bmem + Bnv + Treg + CD8Tmem + CD8Tnv + Eos + NK + Neu + Mono
-                                 + (1|merged_clock_data_5a$id), 
-								varlist = kinship*2, data=merged_clock_data_5a, na.action="na.exclude"))
-}
-
-for (i in 3:16) {
-  correlation <- cor.test(merged_clock_data_5[, i], merged_clock_data_5a[, i])$estimate
-  var_name <- names(merged_clock_data_5)[i]
-  print(paste0("Correlation for ", var_name, ": ", round(correlation, 4)))
-}
-
-# "Correlation for Horvathv1: 0.9837"
-# "Correlation for Hannum: 0.9641"
-# "Correlation for Lin: 0.9866"
-# "Correlation for PhenoAge: 0.9838"
-# "Correlation for YingCausAge: 0.99"
-# "Correlation for YingDamAge: 0.9933"
-# "Correlation for YingAdaptAge: 0.9099"
-# "Correlation for Horvathv2: 0.989"
-# "Correlation for Zhang_10: 0.9092"
-# "Correlation for DunedinPoAm38: 0.9729"
-# "Correlation for DunedinPACE: 0.975"
-# "Correlation for DNAmGrimAge: 0.9785"
-# "Correlation for DNAmGrimAge.1: 0.9766"
-# "Correlation for DNAmTL: 0.9556"
-
-###################################
-### End of sensitivity analysis ###
-###################################
 
 ### KNN imputation for missing covariates ###
 
@@ -188,4 +138,6 @@ merged_clock_data_7 <- cbind(merged_clock_data_6[,c(1:18,24)], covs_imp[,3:7])
 ### binary code for sex ###
 merged_clock_data_7$sex <- ifelse(merged_clock_data_7$sex=="F", 1, 0)
 
-saveRDS(merged_clock_data_7, file="/Cluster_Filespace/Marioni_Group/Riccardo/Christos_17Oct2024/Data/Merged_clock_data_17Oct2024.RDS")
+# Please change file path. --Thomas
+saveRDS(merged_clock_data_7, file="/file_path/Merged_clock_data.RDS")
+saveRDS(PC_cor, file = "/file_path/WBC_PC_correlations.RDS")

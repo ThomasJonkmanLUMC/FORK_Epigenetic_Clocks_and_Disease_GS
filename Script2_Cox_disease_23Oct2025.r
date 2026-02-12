@@ -8,7 +8,9 @@ lapply(packages, function(x) {
 })
 
 # Read in clock data
-clock_data <- readRDS("/Cluster_Filespace/Marioni_Group/Riccardo/Christos_17Oct2024/Data/Merged_clock_data_17Oct2024.RDS")
+# NB: this data also contains the WBC PCs --Thomas
+# Please change file path. --Thomas
+clock_data <- readRDS("/file_path/Merged_clock_data.RDS")
 
 # merge in smoking status for downstream subsetting
 cov_data <- read.csv("/Cluster_Filespace/Marioni_Group/Riccardo/Christos_17Oct2024/Data/2024-04-19_covariates.csv")
@@ -19,10 +21,8 @@ cov_data$smoke <- ifelse(cov_data$pack_years == 0, 0, 1)
 clock_data <- merge(clock_data,cov_data[,c("id", "smoke")], by="id")
 
 # List of clocks to loop through
-clocks <- c("Horvathv1", "Hannum", "Lin", "PhenoAge", "YingCausAge", 
-            "YingDamAge", "YingAdaptAge", "Horvathv2", "Zhang_10", 
-            "DunedinPoAm38", "DunedinPACE", "DNAmGrimAge", 
-            "DNAmGrimAge.1", "DNAmTL")
+# NB: includes the super-accurate clock developed by Zhang et al.
+clocks <- c("Hannum", "Horvathv1", "Zhang_Acc", "PhenoAge", "DNAmGrimAge.1", "DunedinPACE")
 
 # Read in diseases
 diseases <- read.csv("/Cluster_Filespace/Marioni_Group/Riccardo/Christos_17Oct2024/Data/2024-03-29_diseases.csv", stringsAsFactors = FALSE)
@@ -35,53 +35,98 @@ dis_list <- unique(diseases$Disease)
 cat("Number of unique diseases:", length(dis_list), "\n")
 
 # Create storage lists for results
-res.cox.basic <- setNames(vector("list", length(clocks)), clocks)
-res.cox.basic.male <- setNames(vector("list", length(clocks)), clocks)
-res.cox.basic.female <- setNames(vector("list", length(clocks)), clocks)
-res.cox.basic.sex.int <- setNames(vector("list", length(clocks)), clocks)
-res.cox.basic.smoker <- setNames(vector("list", length(clocks)), clocks)
-res.cox.basic.nosmoke <- setNames(vector("list", length(clocks)), clocks)
-res.cox.basic.smoke.int <- setNames(vector("list", length(clocks)), clocks)
-
-res.cox.basic.zph.local <- setNames(vector("list", length(clocks)), clocks)
-res.cox.basic.zph.global <- setNames(vector("list", length(clocks)), clocks)
-res.cox.basic.male.zph.local <- setNames(vector("list", length(clocks)), clocks)
-res.cox.basic.male.zph.global <- setNames(vector("list", length(clocks)), clocks)
-res.cox.basic.female.zph.local <- setNames(vector("list", length(clocks)), clocks)
-res.cox.basic.female.zph.global <- setNames(vector("list", length(clocks)), clocks)
-res.cox.basic.smoker.zph.local <- setNames(vector("list", length(clocks)), clocks)
-res.cox.basic.smoker.zph.global <- setNames(vector("list", length(clocks)), clocks)
-res.cox.basic.nosmoke.zph.local <- setNames(vector("list", length(clocks)), clocks)
-res.cox.basic.nosmoke.zph.global <- setNames(vector("list", length(clocks)), clocks)
+# The following models will be run: clocks alone, clocks adjusted for WBC PCs (11 PCs, including one more each time), and WBC PCs alone (all 11). --Thomas
 
 
-res.cox <- setNames(vector("list", length(clocks)), clocks)
-res.cox.male <- setNames(vector("list", length(clocks)), clocks)
-res.cox.female <- setNames(vector("list", length(clocks)), clocks)
-res.cox.sex.int <- setNames(vector("list", length(clocks)), clocks)
-res.cox.smoker <- setNames(vector("list", length(clocks)), clocks)
-res.cox.nosmoke <- setNames(vector("list", length(clocks)), clocks)
-res.cox.smoke.int <- setNames(vector("list", length(clocks)), clocks)
+#Result objects for Cox-regression models.
+res.cox.clocks <- setNames(vector("list", length(clocks)), clocks)
 
-res.cox.zph.local <- setNames(vector("list", length(clocks)), clocks)
-res.cox.zph.global <- setNames(vector("list", length(clocks)), clocks)
-res.cox.male.zph.local <- setNames(vector("list", length(clocks)), clocks)
-res.cox.male.zph.global <- setNames(vector("list", length(clocks)), clocks)
-res.cox.female.zph.local <- setNames(vector("list", length(clocks)), clocks)
-res.cox.female.zph.global <- setNames(vector("list", length(clocks)), clocks)
-res.cox.smoker.zph.local <- setNames(vector("list", length(clocks)), clocks)
-res.cox.smoker.zph.global <- setNames(vector("list", length(clocks)), clocks)
-res.cox.nosmoke.zph.local <- setNames(vector("list", length(clocks)), clocks)
-res.cox.nosmoke.zph.global <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1 <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1.2 <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1.3 <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1.4 <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1.5 <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1.6 <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1.7 <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1.8 <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1.9 <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1.10 <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1.11 <- setNames(vector("list", length(clocks)), clocks)
+
+res.cox.pc1 <- setNames(vector("list", length(clocks)), clocks)
+res.cox.pc2 <- setNames(vector("list", length(clocks)), clocks)
+res.cox.pc3 <- setNames(vector("list", length(clocks)), clocks)
+res.cox.pc4 <- setNames(vector("list", length(clocks)), clocks)
+res.cox.pc5 <- setNames(vector("list", length(clocks)), clocks)
+res.cox.pc6 <- setNames(vector("list", length(clocks)), clocks)
+res.cox.pc7 <- setNames(vector("list", length(clocks)), clocks)
+res.cox.pc8 <- setNames(vector("list", length(clocks)), clocks)
+res.cox.pc9 <- setNames(vector("list", length(clocks)), clocks)
+res.cox.pc10 <- setNames(vector("list", length(clocks)), clocks)
+res.cox.pc11 <- setNames(vector("list", length(clocks)), clocks)
 
 
+#Result objects for proportional hazards assumption tests.
+res.cox.clocks.zph.local <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.zph.global <- setNames(vector("list", length(clocks)), clocks)
+
+res.cox.clocks.pc1.zph.local <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1.zph.global <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1.2.zph.local <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1.2.zph.global <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1.3.zph.local <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1.3.zph.global <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1.4.zph.local <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1.4.zph.global <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1.5.zph.local <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1.5.zph.global <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1.6.zph.local <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1.6.zph.global <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1.7.zph.local <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1.7.zph.global <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1.8.zph.local <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1.8.zph.global <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1.9.zph.local <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1.9.zph.global <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1.10.zph.local <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1.10.zph.global <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1.11.zph.local <- setNames(vector("list", length(clocks)), clocks)
+res.cox.clocks.pc1.11.zph.global <- setNames(vector("list", length(clocks)), clocks)
+
+res.cox.pc1.zph.local <- setNames(vector("list", length(clocks)), clocks)
+res.cox.pc1.zph.global <- setNames(vector("list", length(clocks)), clocks)
+res.cox.pc2.zph.local <- setNames(vector("list", length(clocks)), clocks)
+res.cox.pc2.zph.global <- setNames(vector("list", length(clocks)), clocks)
+res.cox.pc3.zph.local <- setNames(vector("list", length(clocks)), clocks)
+res.cox.pc3.zph.global <- setNames(vector("list", length(clocks)), clocks)
+res.cox.pc4.zph.local <- setNames(vector("list", length(clocks)), clocks)
+res.cox.pc4.zph.global <- setNames(vector("list", length(clocks)), clocks)
+res.cox.pc5.zph.local <- setNames(vector("list", length(clocks)), clocks)
+res.cox.pc5.zph.global <- setNames(vector("list", length(clocks)), clocks)
+res.cox.pc6.zph.local <- setNames(vector("list", length(clocks)), clocks)
+res.cox.pc6.zph.global <- setNames(vector("list", length(clocks)), clocks)
+res.cox.pc7.zph.local <- setNames(vector("list", length(clocks)), clocks)
+res.cox.pc7.zph.global <- setNames(vector("list", length(clocks)), clocks)
+res.cox.pc8.zph.local <- setNames(vector("list", length(clocks)), clocks)
+res.cox.pc8.zph.global <- setNames(vector("list", length(clocks)), clocks)
+res.cox.pc9.zph.local <- setNames(vector("list", length(clocks)), clocks)
+res.cox.pc9.zph.global <- setNames(vector("list", length(clocks)), clocks)
+res.cox.pc10.zph.local <- setNames(vector("list", length(clocks)), clocks)
+res.cox.pc10.zph.global <- setNames(vector("list", length(clocks)), clocks)
+res.cox.pc11.zph.local <- setNames(vector("list", length(clocks)), clocks)
+res.cox.pc11.zph.global <- setNames(vector("list", length(clocks)), clocks)
+
+
+#Result objects for LRT of WBC effect for clock models.
+res.an.clocks <- setNames(vector("list", length(clocks)), clocks)
 
 
 # Disease summary table
 disease_summary <- list()
 
 # Loop through each disease
-for (disease in dis_list) {
+# Currently looping through only 3 diseases as a test. --Thomas
+for (disease in dis_list[1:3]) {
   disease_data <- diseases %>% filter(Disease == disease)
   cat(sprintf("Processing disease %s\n", disease))
   
@@ -143,146 +188,240 @@ for (disease in dis_list) {
   if (prop_F > 0.1 & prop_F < 0.9) {
     # Case 1: prop_F between 0.1 and 0.9
     for (clock in clocks) {
-      model_formula1 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + sex"))
-      model_formula2 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age"))
-      model_formula3 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") * sex + age"))
-      model_formula4 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") * smoke + age + sex"))
 
-      res.cox.basic[[clock]][[disease]] <- coxph(model_formula1, data = final_data)
-      res.cox.basic.male[[clock]][[disease]] <- coxph(model_formula2, data = final_data[final_data$sex==0,])
-      res.cox.basic.female[[clock]][[disease]] <- coxph(model_formula2, data = final_data[final_data$sex==1,])     
-      res.cox.basic.sex.int[[clock]][[disease]] <- coxph(model_formula3, data = final_data)
-      res.cox.basic.smoker[[clock]][[disease]] <- coxph(model_formula1, data = final_data[final_data$smoke==1,])
-      res.cox.basic.nosmoke[[clock]][[disease]] <- coxph(model_formula1, data = final_data[final_data$smoke==0,])
-      res.cox.basic.smoke.int[[clock]][[disease]] <- coxph(model_formula4, data = final_data)
-
-      model_formula5 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + sex"))
-      model_formula6 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank"))
-      model_formula7 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") * sex + age + bmi + years + pack_years + units + rank"))
-      model_formula8 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + units + rank + sex"))
-      model_formula9 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") * smoke + age + bmi + years + units + rank + sex"))
-
-      res.cox[[clock]][[disease]] <- coxph(model_formula5, data = final_data)
-      res.cox.male[[clock]][[disease]] <- coxph(model_formula6, data = final_data[final_data$sex==0,])
-      res.cox.female[[clock]][[disease]] <- coxph(model_formula6, data = final_data[final_data$sex==1,])     
-      res.cox.sex.int[[clock]][[disease]] <- coxph(model_formula7, data = final_data)
-      res.cox.smoker[[clock]][[disease]] <- coxph(model_formula8, data = final_data[final_data$smoke==1,])
-      res.cox.nosmoke[[clock]][[disease]] <- coxph(model_formula8, data = final_data[final_data$smoke==0,])
-      res.cox.smoke.int[[clock]][[disease]] <- coxph(model_formula9, data = final_data)
-
+      model_formula_clock <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + sex"))
+      
+      model_formula_clock.pc1 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + sex + PC1"))
+      model_formula_clock.pc1.2 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + sex + PC1 + PC2"))
+      model_formula_clock.pc1.3 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + sex + PC1 + PC2 + PC3"))
+      model_formula_clock.pc1.4 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + sex + PC1 + PC2 + PC3 + PC4"))
+      model_formula_clock.pc1.5 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + sex + PC1 + PC2 + PC3 + PC4 + PC5"))
+      model_formula_clock.pc1.6 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + sex + PC1 + PC2 + PC3 + PC4 + PC5 + PC6"))
+      model_formula_clock.pc1.7 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + sex + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7"))
+      model_formula_clock.pc1.8 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + sex + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8"))
+      model_formula_clock.pc1.9 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + sex + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9"))
+      model_formula_clock.pc1.10 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + sex + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10"))
+      model_formula_clock.pc1.11 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + sex + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10 + PC11"))
+      
+      model_formula_pc1 <- as.formula(paste0("Surv(t_event, event) ~ PC1 + age + bmi + years + pack_years + units + rank + sex"))
+      model_formula_pc2 <- as.formula(paste0("Surv(t_event, event) ~ PC2 + age + bmi + years + pack_years + units + rank + sex"))
+      model_formula_pc3 <- as.formula(paste0("Surv(t_event, event) ~ PC3 + age + bmi + years + pack_years + units + rank + sex"))
+      model_formula_pc4 <- as.formula(paste0("Surv(t_event, event) ~ PC4 + age + bmi + years + pack_years + units + rank + sex"))
+      model_formula_pc5 <- as.formula(paste0("Surv(t_event, event) ~ PC5 + age + bmi + years + pack_years + units + rank + sex"))
+      model_formula_pc6 <- as.formula(paste0("Surv(t_event, event) ~ PC6 + age + bmi + years + pack_years + units + rank + sex"))
+      model_formula_pc7 <- as.formula(paste0("Surv(t_event, event) ~ PC7 + age + bmi + years + pack_years + units + rank + sex"))
+      model_formula_pc8 <- as.formula(paste0("Surv(t_event, event) ~ PC8 + age + bmi + years + pack_years + units + rank + sex"))
+      model_formula_pc9 <- as.formula(paste0("Surv(t_event, event) ~ PC9 + age + bmi + years + pack_years + units + rank + sex"))
+      model_formula_pc10 <- as.formula(paste0("Surv(t_event, event) ~ PC10 + age + bmi + years + pack_years + units + rank + sex"))
+      model_formula_pc11 <- as.formula(paste0("Surv(t_event, event) ~ PC11 + age + bmi + years + pack_years + units + rank + sex"))
+      
+      
+      
+      res.cox.clocks[[clock]][[disease]] <- coxph(model_formula_clock, data = final_data)
+      
+      res.cox.clocks.pc1[[clock]][[disease]] <- coxph(model_formula_clock.pc1, data = final_data)
+      res.cox.clocks.pc1.2[[clock]][[disease]] <- coxph(model_formula_clock.pc1.2, data = final_data)
+      res.cox.clocks.pc1.3[[clock]][[disease]] <- coxph(model_formula_clock.pc1.3, data = final_data)
+      res.cox.clocks.pc1.4[[clock]][[disease]] <- coxph(model_formula_clock.pc1.4, data = final_data)
+      res.cox.clocks.pc1.5[[clock]][[disease]] <- coxph(model_formula_clock.pc1.5, data = final_data)
+      res.cox.clocks.pc1.6[[clock]][[disease]] <- coxph(model_formula_clock.pc1.6, data = final_data)
+      res.cox.clocks.pc1.7[[clock]][[disease]] <- coxph(model_formula_clock.pc1.7, data = final_data)
+      res.cox.clocks.pc1.8[[clock]][[disease]] <- coxph(model_formula_clock.pc1.8, data = final_data)
+      res.cox.clocks.pc1.9[[clock]][[disease]] <- coxph(model_formula_clock.pc1.9, data = final_data)
+      res.cox.clocks.pc1.10[[clock]][[disease]] <- coxph(model_formula_clock.pc1.10, data = final_data)
+      res.cox.clocks.pc1.11[[clock]][[disease]] <- coxph(model_formula_clock.pc1.11, data = final_data)
+      
+      res.cox.pc1[[clock]][[disease]] <- coxph(model_formula_pc1, data = final_data)
+      res.cox.pc2[[clock]][[disease]] <- coxph(model_formula_pc2, data = final_data)
+      res.cox.pc3[[clock]][[disease]] <- coxph(model_formula_pc3, data = final_data)
+      res.cox.pc4[[clock]][[disease]] <- coxph(model_formula_pc4, data = final_data)
+      res.cox.pc5[[clock]][[disease]] <- coxph(model_formula_pc5, data = final_data)
+      res.cox.pc6[[clock]][[disease]] <- coxph(model_formula_pc6, data = final_data)
+      res.cox.pc7[[clock]][[disease]] <- coxph(model_formula_pc7, data = final_data)
+      res.cox.pc8[[clock]][[disease]] <- coxph(model_formula_pc8, data = final_data)
+      res.cox.pc9[[clock]][[disease]] <- coxph(model_formula_pc9, data = final_data)
+      res.cox.pc10[[clock]][[disease]] <- coxph(model_formula_pc10, data = final_data)
+      res.cox.pc11[[clock]][[disease]] <- coxph(model_formula_pc11, data = final_data)
+      
+      #Calculate the level of evidence that WBC composition affects the clock-disease association. --Thomas
+      fit1 <- coxph(model_formula_clock, data = final_data)
+      fit2 <- coxph(model_formula_clock.pc1.11, data = final_data)
+      res.an.clocks[[clock]][[disease]] <- anova(fit1, fit2, test = "LRT")$`Pr(>|Chi|)`[2]
+      
     }
   } else if (prop_F <= 0.1) {
     # Case 2: prop_F less than 0.1
     for (clock in clocks) {
 
-      model_formula1 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age"))
-      model_formula2 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") * smoke + age"))
+      model_formula_clock <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank"))
       
-      res.cox.basic[[clock]][[disease]] <- coxph(model_formula1, data = final_data[final_data$sex==0,])
-      res.cox.basic.smoker[[clock]][[disease]] <- coxph(model_formula1, data = final_data[final_data$sex==0 & final_data$smoke==1,])
-      res.cox.basic.nosmoke[[clock]][[disease]] <- coxph(model_formula1, data = final_data[final_data$sex==0 & final_data$smoke==0,])
-      res.cox.basic.smoke.int[[clock]][[disease]] <- coxph(model_formula2, data = final_data[final_data$sex==0,])
+      model_formula_clock.pc1 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + PC1"))
+      model_formula_clock.pc1.2 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + PC1 + PC2"))
+      model_formula_clock.pc1.3 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + PC1 + PC2 + PC3"))
+      model_formula_clock.pc1.4 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + PC1 + PC2 + PC3 + PC4"))
+      model_formula_clock.pc1.5 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + PC1 + PC2 + PC3 + PC4 + PC5"))
+      model_formula_clock.pc1.6 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + PC1 + PC2 + PC3 + PC4 + PC5 + PC6"))
+      model_formula_clock.pc1.7 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7"))
+      model_formula_clock.pc1.8 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8"))
+      model_formula_clock.pc1.9 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9"))
+      model_formula_clock.pc1.10 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10"))
+      model_formula_clock.pc1.11 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10 + PC11"))
+      
+      model_formula_pc1 <- as.formula(paste0("Surv(t_event, event) ~ PC1 + age + bmi + years + pack_years + units + rank"))
+      model_formula_pc2 <- as.formula(paste0("Surv(t_event, event) ~ PC2 + age + bmi + years + pack_years + units + rank"))
+      model_formula_pc3 <- as.formula(paste0("Surv(t_event, event) ~ PC3 + age + bmi + years + pack_years + units + rank"))
+      model_formula_pc4 <- as.formula(paste0("Surv(t_event, event) ~ PC4 + age + bmi + years + pack_years + units + rank"))
+      model_formula_pc5 <- as.formula(paste0("Surv(t_event, event) ~ PC5 + age + bmi + years + pack_years + units + rank"))
+      model_formula_pc6 <- as.formula(paste0("Surv(t_event, event) ~ PC6 + age + bmi + years + pack_years + units + rank"))
+      model_formula_pc7 <- as.formula(paste0("Surv(t_event, event) ~ PC7 + age + bmi + years + pack_years + units + rank"))
+      model_formula_pc8 <- as.formula(paste0("Surv(t_event, event) ~ PC8 + age + bmi + years + pack_years + units + rank"))
+      model_formula_pc9 <- as.formula(paste0("Surv(t_event, event) ~ PC9 + age + bmi + years + pack_years + units + rank"))
+      model_formula_pc10 <- as.formula(paste0("Surv(t_event, event) ~ PC10 + age + bmi + years + pack_years + units + rank"))
+      model_formula_pc11 <- as.formula(paste0("Surv(t_event, event) ~ PC11 + age + bmi + years + pack_years + units + rank"))
 
-      model_formula3 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank"))
-      model_formula4 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + units + rank"))
-      model_formula5 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") * smoke + age + bmi + years + units + rank"))
-
-      res.cox[[clock]][[disease]] <- coxph(model_formula3, data = final_data[final_data$sex==0,])
-      res.cox.smoker[[clock]][[disease]] <- coxph(model_formula4, data = final_data[final_data$sex==0 & final_data$smoke==1,])
-      res.cox.nosmoke[[clock]][[disease]] <- coxph(model_formula4, data = final_data[final_data$sex==0 & final_data$smoke==0,])
-      res.cox.smoke.int[[clock]][[disease]] <- coxph(model_formula5, data = final_data[final_data$sex==0,])
+      
+      
+      res.cox.clocks[[clock]][[disease]] <- coxph(model_formula_clock, data = final_data[final_data$sex==0,])
+      
+      res.cox.clocks.pc1[[clock]][[disease]] <- coxph(model_formula_clock.pc1, data = final_data[final_data$sex==0,])
+      res.cox.clocks.pc1.2[[clock]][[disease]] <- coxph(model_formula_clock.pc1.2, data = final_data[final_data$sex==0,])
+      res.cox.clocks.pc1.3[[clock]][[disease]] <- coxph(model_formula_clock.pc1.3, data = final_data[final_data$sex==0,])
+      res.cox.clocks.pc1.4[[clock]][[disease]] <- coxph(model_formula_clock.pc1.4, data = final_data[final_data$sex==0,])
+      res.cox.clocks.pc1.5[[clock]][[disease]] <- coxph(model_formula_clock.pc1.5, data = final_data[final_data$sex==0,])
+      res.cox.clocks.pc1.6[[clock]][[disease]] <- coxph(model_formula_clock.pc1.6, data = final_data[final_data$sex==0,])
+      res.cox.clocks.pc1.7[[clock]][[disease]] <- coxph(model_formula_clock.pc1.7, data = final_data[final_data$sex==0,])
+      res.cox.clocks.pc1.8[[clock]][[disease]] <- coxph(model_formula_clock.pc1.8, data = final_data[final_data$sex==0,])
+      res.cox.clocks.pc1.9[[clock]][[disease]] <- coxph(model_formula_clock.pc1.9, data = final_data[final_data$sex==0,])
+      res.cox.clocks.pc1.10[[clock]][[disease]] <- coxph(model_formula_clock.pc1.10, data = final_data[final_data$sex==0,])
+      res.cox.clocks.pc1.11[[clock]][[disease]] <- coxph(model_formula_clock.pc1.11, data = final_data[final_data$sex==0,])
+      
+      res.cox.pc1[[clock]][[disease]] <- coxph(model_formula_pc1, data = final_data[final_data$sex==0,])
+      res.cox.pc2[[clock]][[disease]] <- coxph(model_formula_pc2, data = final_data[final_data$sex==0,])
+      res.cox.pc3[[clock]][[disease]] <- coxph(model_formula_pc3, data = final_data[final_data$sex==0,])
+      res.cox.pc4[[clock]][[disease]] <- coxph(model_formula_pc4, data = final_data[final_data$sex==0,])
+      res.cox.pc5[[clock]][[disease]] <- coxph(model_formula_pc5, data = final_data[final_data$sex==0,])
+      res.cox.pc6[[clock]][[disease]] <- coxph(model_formula_pc6, data = final_data[final_data$sex==0,])
+      res.cox.pc7[[clock]][[disease]] <- coxph(model_formula_pc7, data = final_data[final_data$sex==0,])
+      res.cox.pc8[[clock]][[disease]] <- coxph(model_formula_pc8, data = final_data[final_data$sex==0,])
+      res.cox.pc9[[clock]][[disease]] <- coxph(model_formula_pc9, data = final_data[final_data$sex==0,])
+      res.cox.pc10[[clock]][[disease]] <- coxph(model_formula_pc10, data = final_data[final_data$sex==0,])
+      res.cox.pc11[[clock]][[disease]] <- coxph(model_formula_pc11, data = final_data[final_data$sex==0,])
 
     }
   } else {
     # Case 3: prop_F greater than or equal to 0.9
     for (clock in clocks) {
-      model_formula1 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age"))
-      model_formula2 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") * smoke + age"))
       
-      res.cox.basic[[clock]][[disease]] <- coxph(model_formula1, data = final_data[final_data$sex==1,])
-      res.cox.basic.smoker[[clock]][[disease]] <- coxph(model_formula1, data = final_data[final_data$sex==1 & final_data$smoke==1,])
-      res.cox.basic.nosmoke[[clock]][[disease]] <- coxph(model_formula1, data = final_data[final_data$sex==1 & final_data$smoke==0,])
-      res.cox.basic.smoke.int[[clock]][[disease]] <- coxph(model_formula2, data = final_data[final_data$sex==1,])
-
-      model_formula3 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank"))
-      model_formula4 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + units + rank"))
-      model_formula5 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") * smoke + age + bmi + years + units + rank"))
-
-      res.cox[[clock]][[disease]] <- coxph(model_formula3, data = final_data[final_data$sex==1,])
-      res.cox.smoker[[clock]][[disease]] <- coxph(model_formula4, data = final_data[final_data$sex==1 & final_data$smoke==1,])
-      res.cox.nosmoke[[clock]][[disease]] <- coxph(model_formula4, data = final_data[final_data$sex==1 & final_data$smoke==0,])
-      res.cox.smoke.int[[clock]][[disease]] <- coxph(model_formula5, data = final_data[final_data$sex==1,])
+      model_formula_clock <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank"))
+      
+      model_formula_clock.pc1 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + PC1"))
+      model_formula_clock.pc1.2 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + PC1 + PC2"))
+      model_formula_clock.pc1.3 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + PC1 + PC2 + PC3"))
+      model_formula_clock.pc1.4 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + PC1 + PC2 + PC3 + PC4"))
+      model_formula_clock.pc1.5 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + PC1 + PC2 + PC3 + PC4 + PC5"))
+      model_formula_clock.pc1.6 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + PC1 + PC2 + PC3 + PC4 + PC5 + PC6"))
+      model_formula_clock.pc1.7 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7"))
+      model_formula_clock.pc1.8 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8"))
+      model_formula_clock.pc1.9 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9"))
+      model_formula_clock.pc1.10 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10"))
+      model_formula_clock.pc1.11 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10 + PC11"))
+      
+      model_formula_pc1 <- as.formula(paste0("Surv(t_event, event) ~ PC1 + age + bmi + years + pack_years + units + rank"))
+      model_formula_pc2 <- as.formula(paste0("Surv(t_event, event) ~ PC2 + age + bmi + years + pack_years + units + rank"))
+      model_formula_pc3 <- as.formula(paste0("Surv(t_event, event) ~ PC3 + age + bmi + years + pack_years + units + rank"))
+      model_formula_pc4 <- as.formula(paste0("Surv(t_event, event) ~ PC4 + age + bmi + years + pack_years + units + rank"))
+      model_formula_pc5 <- as.formula(paste0("Surv(t_event, event) ~ PC5 + age + bmi + years + pack_years + units + rank"))
+      model_formula_pc6 <- as.formula(paste0("Surv(t_event, event) ~ PC6 + age + bmi + years + pack_years + units + rank"))
+      model_formula_pc7 <- as.formula(paste0("Surv(t_event, event) ~ PC7 + age + bmi + years + pack_years + units + rank"))
+      model_formula_pc8 <- as.formula(paste0("Surv(t_event, event) ~ PC8 + age + bmi + years + pack_years + units + rank"))
+      model_formula_pc9 <- as.formula(paste0("Surv(t_event, event) ~ PC9 + age + bmi + years + pack_years + units + rank"))
+      model_formula_pc10 <- as.formula(paste0("Surv(t_event, event) ~ PC10 + age + bmi + years + pack_years + units + rank"))
+      model_formula_pc11 <- as.formula(paste0("Surv(t_event, event) ~ PC11 + age + bmi + years + pack_years + units + rank"))
+      
+      
+      res.cox.clocks[[clock]][[disease]] <- coxph(model_formula_clock, data = final_data[final_data$sex==1,])
+      
+      res.cox.clocks.pc1[[clock]][[disease]] <- coxph(model_formula_clock.pc1, data = final_data[final_data$sex==1,])
+      res.cox.clocks.pc1.2[[clock]][[disease]] <- coxph(model_formula_clock.pc1.2, data = final_data[final_data$sex==1,])
+      res.cox.clocks.pc1.3[[clock]][[disease]] <- coxph(model_formula_clock.pc1.3, data = final_data[final_data$sex==1,])
+      res.cox.clocks.pc1.4[[clock]][[disease]] <- coxph(model_formula_clock.pc1.4, data = final_data[final_data$sex==1,])
+      res.cox.clocks.pc1.5[[clock]][[disease]] <- coxph(model_formula_clock.pc1.5, data = final_data[final_data$sex==1,])
+      res.cox.clocks.pc1.6[[clock]][[disease]] <- coxph(model_formula_clock.pc1.6, data = final_data[final_data$sex==1,])
+      res.cox.clocks.pc1.7[[clock]][[disease]] <- coxph(model_formula_clock.pc1.7, data = final_data[final_data$sex==1,])
+      res.cox.clocks.pc1.8[[clock]][[disease]] <- coxph(model_formula_clock.pc1.8, data = final_data[final_data$sex==1,])
+      res.cox.clocks.pc1.9[[clock]][[disease]] <- coxph(model_formula_clock.pc1.9, data = final_data[final_data$sex==1,])
+      res.cox.clocks.pc1.10[[clock]][[disease]] <- coxph(model_formula_clock.pc1.10, data = final_data[final_data$sex==1,])
+      res.cox.clocks.pc1.11[[clock]][[disease]] <- coxph(model_formula_clock.pc1.11, data = final_data[final_data$sex==1,])
+      
+      res.cox.pc1[[clock]][[disease]] <- coxph(model_formula_pc1, data = final_data[final_data$sex==1,])
+      res.cox.pc2[[clock]][[disease]] <- coxph(model_formula_pc2, data = final_data[final_data$sex==1,])
+      res.cox.pc3[[clock]][[disease]] <- coxph(model_formula_pc3, data = final_data[final_data$sex==1,])
+      res.cox.pc4[[clock]][[disease]] <- coxph(model_formula_pc4, data = final_data[final_data$sex==1,])
+      res.cox.pc5[[clock]][[disease]] <- coxph(model_formula_pc5, data = final_data[final_data$sex==1,])
+      res.cox.pc6[[clock]][[disease]] <- coxph(model_formula_pc6, data = final_data[final_data$sex==1,])
+      res.cox.pc7[[clock]][[disease]] <- coxph(model_formula_pc7, data = final_data[final_data$sex==1,])
+      res.cox.pc8[[clock]][[disease]] <- coxph(model_formula_pc8, data = final_data[final_data$sex==1,])
+      res.cox.pc9[[clock]][[disease]] <- coxph(model_formula_pc9, data = final_data[final_data$sex==1,])
+      res.cox.pc10[[clock]][[disease]] <- coxph(model_formula_pc10, data = final_data[final_data$sex==1,])
+      res.cox.pc11[[clock]][[disease]] <- coxph(model_formula_pc11, data = final_data[final_data$sex==1,])
 
     }
   }
 
 cat(sprintf("Running zph for %s\n", disease))
 
-
-if (prop_F > 0.1 & prop_F < 0.9) {
-
 for (clock in clocks) {
-  # Basic model
-  res.cox.basic.zph.local[[clock]][[disease]]        <- cox.zph(res.cox.basic[[clock]][[disease]])$table[1, ]
-  res.cox.basic.zph.global[[clock]][[disease]]       <- cox.zph(res.cox.basic[[clock]][[disease]])$table["GLOBAL", ]
 
-  # Basic male/female/smoker/nosmoke
-  res.cox.basic.male.zph.local[[clock]][[disease]]   <- cox.zph(res.cox.basic.male[[clock]][[disease]])$table[1, ]
-  res.cox.basic.male.zph.global[[clock]][[disease]]  <- cox.zph(res.cox.basic.male[[clock]][[disease]])$table["GLOBAL", ]
+  res.cox.clocks.zph.local[[clock]][[disease]]         <- cox.zph(res.cox.clocks[[clock]][[disease]])$table[1, ]
+  res.cox.clocks.zph.global[[clock]][[disease]]        <- cox.zph(res.cox.clocks[[clock]][[disease]])$table["GLOBAL", ]
   
-  res.cox.basic.female.zph.local[[clock]][[disease]] <- cox.zph(res.cox.basic.female[[clock]][[disease]])$table[1, ]
-  res.cox.basic.female.zph.global[[clock]][[disease]]<- cox.zph(res.cox.basic.female[[clock]][[disease]])$table["GLOBAL", ]
+  res.cox.clocks.pc1.zph.local[[clock]][[disease]]     <- cox.zph(res.cox.clocks.pc1[[clock]][[disease]])$table[1, ]
+  res.cox.clocks.pc1.zph.global[[clock]][[disease]]    <- cox.zph(res.cox.clocks.pc1[[clock]][[disease]])$table["GLOBAL", ]
+  res.cox.clocks.pc1.2.zph.local[[clock]][[disease]]   <- cox.zph(res.cox.clocks.pc1.2[[clock]][[disease]])$table[1, ]
+  res.cox.clocks.pc1.2.zph.global[[clock]][[disease]]  <- cox.zph(res.cox.clocks.pc1.2[[clock]][[disease]])$table["GLOBAL", ]
+  res.cox.clocks.pc1.3.zph.local[[clock]][[disease]]   <- cox.zph(res.cox.clocks.pc1.3[[clock]][[disease]])$table[1, ]
+  res.cox.clocks.pc1.3.zph.global[[clock]][[disease]]  <- cox.zph(res.cox.clocks.pc1.3[[clock]][[disease]])$table["GLOBAL", ]
+  res.cox.clocks.pc1.4.zph.local[[clock]][[disease]]   <- cox.zph(res.cox.clocks.pc1.4[[clock]][[disease]])$table[1, ]
+  res.cox.clocks.pc1.4.zph.global[[clock]][[disease]]  <- cox.zph(res.cox.clocks.pc1.4[[clock]][[disease]])$table["GLOBAL", ]
+  res.cox.clocks.pc1.5.zph.local[[clock]][[disease]]   <- cox.zph(res.cox.clocks.pc1.5[[clock]][[disease]])$table[1, ]
+  res.cox.clocks.pc1.5.zph.global[[clock]][[disease]]  <- cox.zph(res.cox.clocks.pc1.5[[clock]][[disease]])$table["GLOBAL", ]
+  res.cox.clocks.pc1.6.zph.local[[clock]][[disease]]   <- cox.zph(res.cox.clocks.pc1.6[[clock]][[disease]])$table[1, ]
+  res.cox.clocks.pc1.6.zph.global[[clock]][[disease]]  <- cox.zph(res.cox.clocks.pc1.6[[clock]][[disease]])$table["GLOBAL", ]
+  res.cox.clocks.pc1.7.zph.local[[clock]][[disease]]   <- cox.zph(res.cox.clocks.pc1.7[[clock]][[disease]])$table[1, ]
+  res.cox.clocks.pc1.7.zph.global[[clock]][[disease]]  <- cox.zph(res.cox.clocks.pc1.7[[clock]][[disease]])$table["GLOBAL", ]
+  res.cox.clocks.pc1.8.zph.local[[clock]][[disease]]   <- cox.zph(res.cox.clocks.pc1.8[[clock]][[disease]])$table[1, ]
+  res.cox.clocks.pc1.8.zph.global[[clock]][[disease]]  <- cox.zph(res.cox.clocks.pc1.8[[clock]][[disease]])$table["GLOBAL", ]
+  res.cox.clocks.pc1.9.zph.local[[clock]][[disease]]   <- cox.zph(res.cox.clocks.pc1.9[[clock]][[disease]])$table[1, ]
+  res.cox.clocks.pc1.9.zph.global[[clock]][[disease]]  <- cox.zph(res.cox.clocks.pc1.9[[clock]][[disease]])$table["GLOBAL", ]
+  res.cox.clocks.pc1.10.zph.local[[clock]][[disease]]  <- cox.zph(res.cox.clocks.pc1.10[[clock]][[disease]])$table[1, ]
+  res.cox.clocks.pc1.10.zph.global[[clock]][[disease]] <- cox.zph(res.cox.clocks.pc1.10[[clock]][[disease]])$table["GLOBAL", ]
+  res.cox.clocks.pc1.11.zph.local[[clock]][[disease]]  <- cox.zph(res.cox.clocks.pc1.11[[clock]][[disease]])$table[1, ]
+  res.cox.clocks.pc1.11.zph.global[[clock]][[disease]] <- cox.zph(res.cox.clocks.pc1.11[[clock]][[disease]])$table["GLOBAL", ]
   
-  res.cox.basic.smoker.zph.local[[clock]][[disease]] <- cox.zph(res.cox.basic.smoker[[clock]][[disease]])$table[1, ]
-  res.cox.basic.smoker.zph.global[[clock]][[disease]]<- cox.zph(res.cox.basic.smoker[[clock]][[disease]])$table["GLOBAL", ]
+  res.cox.pc1.zph.local[[clock]][[disease]]            <- cox.zph(res.cox.pc1[[clock]][[disease]])$table[1, ]
+  res.cox.pc1.zph.global[[clock]][[disease]]           <- cox.zph(res.cox.pc1[[clock]][[disease]])$table["GLOBAL", ]
+  res.cox.pc2.zph.local[[clock]][[disease]]            <- cox.zph(res.cox.pc2[[clock]][[disease]])$table[1, ]
+  res.cox.pc2.zph.global[[clock]][[disease]]           <- cox.zph(res.cox.pc2[[clock]][[disease]])$table["GLOBAL", ]
+  res.cox.pc3.zph.local[[clock]][[disease]]            <- cox.zph(res.cox.pc3[[clock]][[disease]])$table[1, ]
+  res.cox.pc3.zph.global[[clock]][[disease]]           <- cox.zph(res.cox.pc3[[clock]][[disease]])$table["GLOBAL", ]
+  res.cox.pc4.zph.local[[clock]][[disease]]            <- cox.zph(res.cox.pc4[[clock]][[disease]])$table[1, ]
+  res.cox.pc4.zph.global[[clock]][[disease]]           <- cox.zph(res.cox.pc4[[clock]][[disease]])$table["GLOBAL", ]
+  res.cox.pc5.zph.local[[clock]][[disease]]            <- cox.zph(res.cox.pc5[[clock]][[disease]])$table[1, ]
+  res.cox.pc5.zph.global[[clock]][[disease]]           <- cox.zph(res.cox.pc5[[clock]][[disease]])$table["GLOBAL", ]
+  res.cox.pc6.zph.local[[clock]][[disease]]            <- cox.zph(res.cox.pc6[[clock]][[disease]])$table[1, ]
+  res.cox.pc6.zph.global[[clock]][[disease]]           <- cox.zph(res.cox.pc6[[clock]][[disease]])$table["GLOBAL", ]
+  res.cox.pc7.zph.local[[clock]][[disease]]            <- cox.zph(res.cox.pc7[[clock]][[disease]])$table[1, ]
+  res.cox.pc7.zph.global[[clock]][[disease]]           <- cox.zph(res.cox.pc7[[clock]][[disease]])$table["GLOBAL", ]
+  res.cox.pc8.zph.local[[clock]][[disease]]            <- cox.zph(res.cox.pc8[[clock]][[disease]])$table[1, ]
+  res.cox.pc8.zph.global[[clock]][[disease]]           <- cox.zph(res.cox.pc8[[clock]][[disease]])$table["GLOBAL", ]
+  res.cox.pc9.zph.local[[clock]][[disease]]            <- cox.zph(res.cox.pc9[[clock]][[disease]])$table[1, ]
+  res.cox.pc9.zph.global[[clock]][[disease]]           <- cox.zph(res.cox.pc9[[clock]][[disease]])$table["GLOBAL", ]
+  res.cox.pc10.zph.local[[clock]][[disease]]           <- cox.zph(res.cox.pc10[[clock]][[disease]])$table[1, ]
+  res.cox.pc10.zph.global[[clock]][[disease]]          <- cox.zph(res.cox.pc10[[clock]][[disease]])$table["GLOBAL", ]
+  res.cox.pc11.zph.local[[clock]][[disease]]           <- cox.zph(res.cox.pc11[[clock]][[disease]])$table[1, ]
+  res.cox.pc11.zph.global[[clock]][[disease]]          <- cox.zph(res.cox.pc11[[clock]][[disease]])$table["GLOBAL", ]
   
-  res.cox.basic.nosmoke.zph.local[[clock]][[disease]]<- cox.zph(res.cox.basic.nosmoke[[clock]][[disease]])$table[1, ]
-  res.cox.basic.nosmoke.zph.global[[clock]][[disease]]<- cox.zph(res.cox.basic.nosmoke[[clock]][[disease]])$table["GLOBAL", ]
-
-  # Extended model
-  res.cox.zph.local[[clock]][[disease]]              <- cox.zph(res.cox[[clock]][[disease]])$table[1, ]
-  res.cox.zph.global[[clock]][[disease]]             <- cox.zph(res.cox[[clock]][[disease]])$table["GLOBAL", ]
-
-  # Extended male/female/smoker/nosmoke
-  res.cox.male.zph.local[[clock]][[disease]]         <- cox.zph(res.cox.male[[clock]][[disease]])$table[1, ]
-  res.cox.male.zph.global[[clock]][[disease]]        <- cox.zph(res.cox.male[[clock]][[disease]])$table["GLOBAL", ]
-  
-  res.cox.female.zph.local[[clock]][[disease]]       <- cox.zph(res.cox.female[[clock]][[disease]])$table[1, ]
-  res.cox.female.zph.global[[clock]][[disease]]      <- cox.zph(res.cox.female[[clock]][[disease]])$table["GLOBAL", ]
-  
-  res.cox.smoker.zph.local[[clock]][[disease]]       <- cox.zph(res.cox.smoker[[clock]][[disease]])$table[1, ]
-  res.cox.smoker.zph.global[[clock]][[disease]]      <- cox.zph(res.cox.smoker[[clock]][[disease]])$table["GLOBAL", ]
-  
-  res.cox.nosmoke.zph.local[[clock]][[disease]]      <- cox.zph(res.cox.nosmoke[[clock]][[disease]])$table[1, ]
-  res.cox.nosmoke.zph.global[[clock]][[disease]]     <- cox.zph(res.cox.nosmoke[[clock]][[disease]])$table["GLOBAL", ]
 }
-
-  } else {
-
-    for (clock in clocks) {
-  # Basic model
-  res.cox.basic.zph.local[[clock]][[disease]]        <- cox.zph(res.cox.basic[[clock]][[disease]])$table[1, ]
-  res.cox.basic.zph.global[[clock]][[disease]]       <- cox.zph(res.cox.basic[[clock]][[disease]])$table["GLOBAL", ]
-
-  res.cox.basic.smoker.zph.local[[clock]][[disease]] <- cox.zph(res.cox.basic.smoker[[clock]][[disease]])$table[1, ]
-  res.cox.basic.smoker.zph.global[[clock]][[disease]]<- cox.zph(res.cox.basic.smoker[[clock]][[disease]])$table["GLOBAL", ]
-  
-  res.cox.basic.nosmoke.zph.local[[clock]][[disease]]<- cox.zph(res.cox.basic.nosmoke[[clock]][[disease]])$table[1, ]
-  res.cox.basic.nosmoke.zph.global[[clock]][[disease]]<- cox.zph(res.cox.basic.nosmoke[[clock]][[disease]])$table["GLOBAL", ]
-
-  # Extended model
-  res.cox.zph.local[[clock]][[disease]]              <- cox.zph(res.cox[[clock]][[disease]])$table[1, ]
-  res.cox.zph.global[[clock]][[disease]]             <- cox.zph(res.cox[[clock]][[disease]])$table["GLOBAL", ]
-
-  res.cox.smoker.zph.local[[clock]][[disease]]       <- cox.zph(res.cox.smoker[[clock]][[disease]])$table[1, ]
-  res.cox.smoker.zph.global[[clock]][[disease]]      <- cox.zph(res.cox.smoker[[clock]][[disease]])$table["GLOBAL", ]
-  
-  res.cox.nosmoke.zph.local[[clock]][[disease]]      <- cox.zph(res.cox.nosmoke[[clock]][[disease]])$table[1, ]
-  res.cox.nosmoke.zph.global[[clock]][[disease]]     <- cox.zph(res.cox.nosmoke[[clock]][[disease]])$table["GLOBAL", ]
-}
-
-}
-
 
   # Cleanup
   rm(final_data)
@@ -361,18 +500,34 @@ process_model_results <- function(model_list, zph_local, zph_global, tag = "mode
 
 
 results_list <- list(
-  full   = list(model=res.cox, zph_local=res.cox.zph.local, zph_global=res.cox.zph.global),
-  full_male   = list(model=res.cox.male, zph_local=res.cox.male.zph.local, zph_global=res.cox.male.zph.global),
-  full_female = list(model=res.cox.female, zph_local=res.cox.female.zph.local, zph_global=res.cox.female.zph.global),
-  full_smoke   = list(model=res.cox.smoker, zph_local=res.cox.smoker.zph.local, zph_global=res.cox.smoker.zph.global),
-  full_nosmoke = list(model=res.cox.nosmoke, zph_local=res.cox.nosmoke.zph.local, zph_global=res.cox.nosmoke.zph.global),
-  basic   = list(model=res.cox.basic, zph_local=res.cox.basic.zph.local, zph_global=res.cox.basic.zph.global),
-  basic_male   = list(model=res.cox.basic.male, zph_local=res.cox.basic.male.zph.local, zph_global=res.cox.basic.male.zph.global),
-  basic_female = list(model=res.cox.basic.female, zph_local=res.cox.basic.female.zph.local, zph_global=res.cox.basic.female.zph.global),
-  basic_smoke   = list(model=res.cox.basic.smoker, zph_local=res.cox.basic.smoker.zph.local, zph_global=res.cox.basic.smoker.zph.global),
-  basic_nosmoke = list(model=res.cox.basic.nosmoke, zph_local=res.cox.basic.nosmoke.zph.local, zph_global=res.cox.basic.nosmoke.zph.global)
 
+  clocks        = list(model=res.cox.clocks, zph_local=res.cox.clocks.zph.local, zph_global=res.cox.clocks.zph.global),
+  
+  clocks.pc1    = list(model=res.cox.clocks.pc1, zph_local=res.cox.clocks.pc1.zph.local, zph_global=res.cox.clocks.pc1.zph.global),
+  clocks.pc1.2  = list(model=res.cox.clocks.pc1.2, zph_local=res.cox.clocks.pc1.2.zph.local, zph_global=res.cox.clocks.pc1.2.zph.global),
+  clocks.pc1.3  = list(model=res.cox.clocks.pc1.3, zph_local=res.cox.clocks.pc1.3.zph.local, zph_global=res.cox.clocks.pc1.3.zph.global),
+  clocks.pc1.4  = list(model=res.cox.clocks.pc1.4, zph_local=res.cox.clocks.pc1.4.zph.local, zph_global=res.cox.clocks.pc1.4.zph.global),
+  clocks.pc1.5  = list(model=res.cox.clocks.pc1.5, zph_local=res.cox.clocks.pc1.5.zph.local, zph_global=res.cox.clocks.pc1.5.zph.global),
+  clocks.pc1.6  = list(model=res.cox.clocks.pc1.6, zph_local=res.cox.clocks.pc1.6.zph.local, zph_global=res.cox.clocks.pc1.6.zph.global),
+  clocks.pc1.7  = list(model=res.cox.clocks.pc1.7, zph_local=res.cox.clocks.pc1.7.zph.local, zph_global=res.cox.clocks.pc1.7.zph.global),
+  clocks.pc1.8  = list(model=res.cox.clocks.pc1.8, zph_local=res.cox.clocks.pc1.8.zph.local, zph_global=res.cox.clocks.pc1.8.zph.global),
+  clocks.pc1.9  = list(model=res.cox.clocks.pc1.9, zph_local=res.cox.clocks.pc1.9.zph.local, zph_global=res.cox.clocks.pc1.9.zph.global),
+  clocks.pc1.10 = list(model=res.cox.clocks.pc1.10, zph_local=res.cox.clocks.pc1.10.zph.local, zph_global=res.cox.clocks.pc1.10.zph.global),
+  clocks.pc1.11 = list(model=res.cox.clocks.pc1.11, zph_local=res.cox.clocks.pc1.11.zph.local, zph_global=res.cox.clocks.pc1.11.zph.global),
+  
+  pc1           = list(model=res.cox.pc1, zph=res.cox.pc1.zph.local, zph_global=res.cox.pc1.zph.global),
+  pc2           = list(model=res.cox.pc2, zph=res.cox.pc2.zph.local, zph_global=res.cox.pc2.zph.global),
+  pc3           = list(model=res.cox.pc3, zph=res.cox.pc3.zph.local, zph_global=res.cox.pc3.zph.global),
+  pc4           = list(model=res.cox.pc4, zph=res.cox.pc4.zph.local, zph_global=res.cox.pc4.zph.global),
+  pc5           = list(model=res.cox.pc5, zph=res.cox.pc5.zph.local, zph_global=res.cox.pc5.zph.global),
+  pc6           = list(model=res.cox.pc6, zph=res.cox.pc6.zph.local, zph_global=res.cox.pc6.zph.global),
+  pc7           = list(model=res.cox.pc7, zph=res.cox.pc7.zph.local, zph_global=res.cox.pc7.zph.global),
+  pc8           = list(model=res.cox.pc8, zph=res.cox.pc8.zph.local, zph_global=res.cox.pc8.zph.global),
+  pc9           = list(model=res.cox.pc9, zph=res.cox.pc9.zph.local, zph_global=res.cox.pc9.zph.global),
+  pc10          = list(model=res.cox.pc10, zph=res.cox.pc10.zph.local, zph_global=res.cox.pc10.zph.global),
+  pc11          = list(model=res.cox.pc11, zph=res.cox.pc11.zph.local, zph_global=res.cox.pc11.zph.global)
 )
+
 
 all_results <- do.call(rbind, lapply(names(results_list), function(tag) {
   model_info <- results_list[[tag]]
@@ -380,83 +535,6 @@ all_results <- do.call(rbind, lapply(names(results_list), function(tag) {
 }))
 
 
-
-
-
-
-### now to extract the interaction terms for sex and smoking
-
-extract_interaction_term_only <- function(models_list, model_tag = NA, interaction_pattern = ":") {
-  results <- list()
-
-  for (clock in names(models_list)) {
-    clock_coeffs <- list()
-    
-    for (disease in names(models_list[[clock]])) {
-      model <- models_list[[clock]][[disease]]
-      coef_table <- summary(model)$coefficients
-      
-      # Find the interaction term row
-      interaction_row <- coef_table[grep(interaction_pattern, rownames(coef_table)), , drop = FALSE]
-      
-      if (nrow(interaction_row) == 1) {
-        coef_val  <- as.numeric(interaction_row[1, "coef"])
-        HR        <- as.numeric(interaction_row[1, "exp(coef)"])
-        SE        <- as.numeric(interaction_row[1, "se(coef)"])
-        P         <- as.numeric(interaction_row[1, "Pr(>|z|)"])
-        Z         <- as.numeric(interaction_row[1, "z"])
-	   df         <- 1
-        n_event   <- summary(model)$nevent
-        n_total   <- summary(model)$n
-        
-        clock_coeffs[[disease]] <- data.frame(
-          Clock = clock,
-          disease = disease,
-          N_cases = n_event,
-          N_total = n_total,
-          HR = HR,
-          coef = coef_val,
-          SE = SE,
-          P = P,
-          Z = Z,
-          df = df
-        )
-      }
-    }
-    
-    if (length(clock_coeffs) > 0) {
-      results[[clock]] <- do.call(rbind, clock_coeffs)
-    }
-  }
-
-  # Combine all into one dataframe
-  final <- do.call(rbind, results)
-
-  # Add confidence intervals
-  final$LCI <- exp(final$coef - 1.96 * final$SE)
-  final$UCI <- exp(final$coef + 1.96 * final$SE)
-  final$model <- model_tag
-
-  # Rearrange columns
-  final <- final[, c("Clock", "disease", "N_cases", "N_total", "HR", "LCI", "UCI", "P","Z","df", "model")]
-
-  return(final)
-}
-
-
-interaction_models <- list(
-  sex_int = res.cox.sex.int,
-  smoke_int = res.cox.smoke.int,
-  basic_sex_int = res.cox.basic.sex.int,
-  basic_smoke_int = res.cox.basic.smoke.int
-)
-
-# Run extraction for each
-interaction_results <- do.call(rbind, lapply(names(interaction_models), function(tag) {
-  extract_interaction_term_only(interaction_models[[tag]], model_tag = tag)
-}))
-
-
-
-write.csv(all_results, "/Cluster_Filespace/Marioni_Group/Riccardo/Christos_17Oct2024/Results/All_Results_23Oct2025.csv", row.names=F)
-write.csv(interaction_results, "/Cluster_Filespace/Marioni_Group/Riccardo/Christos_17Oct2024/Results/Interaction_Results_23Oct2025.csv", row.names=F)
+# Please change file path. --Thomas
+write.csv(all_results, "/file_path/All_Results.csv", row.names=F)
+save(res.an.clocks, "/file_path/clock_WBC_LRT.rda")
