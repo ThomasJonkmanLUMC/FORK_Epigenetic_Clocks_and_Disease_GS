@@ -515,17 +515,17 @@ results_list <- list(
   clocks.pc1.10 = list(model=res.cox.clocks.pc1.10, zph_local=res.cox.clocks.pc1.10.zph.local, zph_global=res.cox.clocks.pc1.10.zph.global),
   clocks.pc1.11 = list(model=res.cox.clocks.pc1.11, zph_local=res.cox.clocks.pc1.11.zph.local, zph_global=res.cox.clocks.pc1.11.zph.global),
   
-  pc1           = list(model=res.cox.pc1, zph=res.cox.pc1.zph.local, zph_global=res.cox.pc1.zph.global),
-  pc2           = list(model=res.cox.pc2, zph=res.cox.pc2.zph.local, zph_global=res.cox.pc2.zph.global),
-  pc3           = list(model=res.cox.pc3, zph=res.cox.pc3.zph.local, zph_global=res.cox.pc3.zph.global),
-  pc4           = list(model=res.cox.pc4, zph=res.cox.pc4.zph.local, zph_global=res.cox.pc4.zph.global),
-  pc5           = list(model=res.cox.pc5, zph=res.cox.pc5.zph.local, zph_global=res.cox.pc5.zph.global),
-  pc6           = list(model=res.cox.pc6, zph=res.cox.pc6.zph.local, zph_global=res.cox.pc6.zph.global),
-  pc7           = list(model=res.cox.pc7, zph=res.cox.pc7.zph.local, zph_global=res.cox.pc7.zph.global),
-  pc8           = list(model=res.cox.pc8, zph=res.cox.pc8.zph.local, zph_global=res.cox.pc8.zph.global),
-  pc9           = list(model=res.cox.pc9, zph=res.cox.pc9.zph.local, zph_global=res.cox.pc9.zph.global),
-  pc10          = list(model=res.cox.pc10, zph=res.cox.pc10.zph.local, zph_global=res.cox.pc10.zph.global),
-  pc11          = list(model=res.cox.pc11, zph=res.cox.pc11.zph.local, zph_global=res.cox.pc11.zph.global)
+  pc1           = list(model=res.cox.pc1, zph_local=res.cox.pc1.zph.local, zph_global=res.cox.pc1.zph.global),
+  pc2           = list(model=res.cox.pc2, zph_local=res.cox.pc2.zph.local, zph_global=res.cox.pc2.zph.global),
+  pc3           = list(model=res.cox.pc3, zph_local=res.cox.pc3.zph.local, zph_global=res.cox.pc3.zph.global),
+  pc4           = list(model=res.cox.pc4, zph_local=res.cox.pc4.zph.local, zph_global=res.cox.pc4.zph.global),
+  pc5           = list(model=res.cox.pc5, zph_local=res.cox.pc5.zph.local, zph_global=res.cox.pc5.zph.global),
+  pc6           = list(model=res.cox.pc6, zph_local=res.cox.pc6.zph.local, zph_global=res.cox.pc6.zph.global),
+  pc7           = list(model=res.cox.pc7, zph_local=res.cox.pc7.zph.local, zph_global=res.cox.pc7.zph.global),
+  pc8           = list(model=res.cox.pc8, zph_local=res.cox.pc8.zph.local, zph_global=res.cox.pc8.zph.global),
+  pc9           = list(model=res.cox.pc9, zph_local=res.cox.pc9.zph.local, zph_global=res.cox.pc9.zph.global),
+  pc10          = list(model=res.cox.pc10, zph_local=res.cox.pc10.zph.local, zph_global=res.cox.pc10.zph.global),
+  pc11          = list(model=res.cox.pc11, zph_local=res.cox.pc11.zph.local, zph_global=res.cox.pc11.zph.global)
 )
 
 
@@ -536,5 +536,5 @@ all_results <- do.call(rbind, lapply(names(results_list), function(tag) {
 
 
 # Please change file path. --Thomas
-write.csv(all_results, "/file_path/All_Results.csv", row.names=F)
-save(res.an.clocks, "/file_path/clock_WBC_LRT.rda")
+save(all_results, file = "/file_path/Disease_Results.rda")
+save(res.an.clocks, file = "/file_path/clock_WBC_LRT.rda")
