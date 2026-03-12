@@ -86,13 +86,13 @@ WBC_epidish <- WBC_epidish*100
 
 ### Project PC loadings onto WBC proportions --Thomas ###
 ### Please change the load command to the proper file path. --Thomas ###
-load("/path_to_file/PC projection.rda")
+load("/path_to_file/updated_PC projection.rda")
 WBC_sc <- scale(WBC_epidish, center = pca.trunc$center, scale = pca.trunc$scale)
-WBC_PCA <- WBC_sc %*% pca.trunc$rotation
+WBC_PCA <- as.data.frame(WBC_sc %*% pca.trunc$rotation)
 WBC_PCA$DNAm_ID <- row.names(WBC_epidish)
 
 ### Sanity check: print correlation between PCs and individual WBC fractions and PCs. --Thomas ###
-PC_cor <- cor(WBC_epidish, WBC_PCA)
+PC_cor <- cor(WBC_epidish, WBC_PCA[,1:12])
 print(PC_cor)
 
 ### Merge WBCs ###

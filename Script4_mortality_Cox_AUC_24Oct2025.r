@@ -110,6 +110,9 @@ model_formula_clocks.pc1.9 <- as.formula(paste0("Surv(t_censor, dead) ~ scale(cl
 model_formula_clocks.pc1.10 <- as.formula(paste0("Surv(t_censor, dead) ~ scale(clock) + age + bmi + years + pack_years + units + rank + sex + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10"))
 model_formula_clocks.pc1.11 <- as.formula(paste0("Surv(t_censor, dead) ~ scale(clock) + age + bmi + years + pack_years + units + rank + sex + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10 + PC11"))
 
+model_formula_raw <- as.formula(paste0("Surv(t_censor, dead) ~ age + bmi + years + pack_years + units + rank + sex"))
+model_formula_pc1.11 <- as.formula(paste0("Surv(t_censor, dead) ~ PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10 + PC11 + age + bmi + years + pack_years + units + rank + sex"))
+
 model_formula_pc1 <- as.formula(paste0("Surv(t_censor, dead) ~ PC1 + age + bmi + years + pack_years + units + rank + sex"))
 model_formula_pc2 <- as.formula(paste0("Surv(t_censor, dead) ~ PC2 + age + bmi + years + pack_years + units + rank + sex"))
 model_formula_pc3 <- as.formula(paste0("Surv(t_censor, dead) ~ PC3 + age + bmi + years + pack_years + units + rank + sex"))
@@ -226,9 +229,15 @@ out.pcs <- rbind(out.pc1[1,], out.pc2[1,], out.pc3[1,], out.pc4[1,], out.pc5[1,]
 names(out.pcs)[1] <- "PC"
 out.pcs$PC <- paste0("PC", 1:11)
 
-#Calculate the level of evidence that WBC composition affects the clock-disease association. --Thomas
+#Calculate the level of evidence that WBC composition has an effect on mortality, both with and without the clocks. --Thomas
+out.an <- setNames(vector("list", length(clocks)), clocks)
 out.an.clocks <- setNames(vector("list", length(clocks)), clocks)
 for(clock in clocks){
+  
+  d$clock <- d[,clock]
+  fit1 <- coxph(model_formula_raw, data = d)
+  fit2 <- coxph(model_formula_pc1.11, data = d)
+  out.an[[clock]] <- anova(fit1, fit2, test = "LRT")$`Pr(>|Chi|)`[2]
   
   d$clock <- d[,clock]
   fit1 <- coxph(model_formula_clocks, data = d)
@@ -252,6 +261,7 @@ all_results <- list(
   clocks.pc1.11 = out.clocks.pc1.11,
   
   pcs = out.pcs,
+  an.raw = out.an,
   an.clocks = out.an.clocks
 )
 

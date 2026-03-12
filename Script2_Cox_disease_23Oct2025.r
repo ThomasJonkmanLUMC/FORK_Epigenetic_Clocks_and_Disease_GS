@@ -116,17 +116,16 @@ res.cox.pc10.zph.global <- setNames(vector("list", length(clocks)), clocks)
 res.cox.pc11.zph.local <- setNames(vector("list", length(clocks)), clocks)
 res.cox.pc11.zph.global <- setNames(vector("list", length(clocks)), clocks)
 
-
-#Result objects for LRT of WBC effect for clock models.
+#Result objects for LRT of WBC effect (with and without clocks). --Thomas
+res.an <- setNames(vector("list", length(clocks)), clocks)
 res.an.clocks <- setNames(vector("list", length(clocks)), clocks)
 
 
 # Disease summary table
 disease_summary <- list()
 
-# Loop through each disease
-# Currently looping through only 3 diseases as a test. --Thomas
-for (disease in dis_list[1:3]) {
+# Loop through each disease.
+for (disease in dis_list) {
   disease_data <- diseases %>% filter(Disease == disease)
   cat(sprintf("Processing disease %s\n", disease))
   
@@ -203,6 +202,9 @@ for (disease in dis_list[1:3]) {
       model_formula_clock.pc1.10 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + sex + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10"))
       model_formula_clock.pc1.11 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + sex + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10 + PC11"))
       
+      model_formula_raw <- as.formula(paste0("Surv(t_event, event) ~ age + bmi + years + pack_years + units + rank + sex"))
+      model_formula_pc1.11 <- as.formula(paste0("Surv(t_event, event) ~ PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10 + PC11 + age + bmi + years + pack_years + units + rank + sex"))
+      
       model_formula_pc1 <- as.formula(paste0("Surv(t_event, event) ~ PC1 + age + bmi + years + pack_years + units + rank + sex"))
       model_formula_pc2 <- as.formula(paste0("Surv(t_event, event) ~ PC2 + age + bmi + years + pack_years + units + rank + sex"))
       model_formula_pc3 <- as.formula(paste0("Surv(t_event, event) ~ PC3 + age + bmi + years + pack_years + units + rank + sex"))
@@ -243,7 +245,11 @@ for (disease in dis_list[1:3]) {
       res.cox.pc10[[clock]][[disease]] <- coxph(model_formula_pc10, data = final_data)
       res.cox.pc11[[clock]][[disease]] <- coxph(model_formula_pc11, data = final_data)
       
-      #Calculate the level of evidence that WBC composition affects the clock-disease association. --Thomas
+      #Calculate the level of evidence that WBC composition has an effect on the outcome, both with and without the clocks. --Thomas
+      fit1 <- coxph(model_formula_raw, data = final_data)
+      fit2 <- coxph(model_formula_pc1.11, data = final_data)
+      res.an[[clock]][[disease]] <- anova(fit1, fit2, test = "LRT")$`Pr(>|Chi|)`[2]
+      
       fit1 <- coxph(model_formula_clock, data = final_data)
       fit2 <- coxph(model_formula_clock.pc1.11, data = final_data)
       res.an.clocks[[clock]][[disease]] <- anova(fit1, fit2, test = "LRT")$`Pr(>|Chi|)`[2]
@@ -266,6 +272,9 @@ for (disease in dis_list[1:3]) {
       model_formula_clock.pc1.9 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9"))
       model_formula_clock.pc1.10 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10"))
       model_formula_clock.pc1.11 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10 + PC11"))
+      
+      model_formula_raw <- as.formula(paste0("Surv(t_event, event) ~ age + bmi + years + pack_years + units + rank"))
+      model_formula_pc1.11 <- as.formula(paste0("Surv(t_event, event) ~ PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10 + PC11 + age + bmi + years + pack_years + units + rank"))
       
       model_formula_pc1 <- as.formula(paste0("Surv(t_event, event) ~ PC1 + age + bmi + years + pack_years + units + rank"))
       model_formula_pc2 <- as.formula(paste0("Surv(t_event, event) ~ PC2 + age + bmi + years + pack_years + units + rank"))
@@ -307,6 +316,14 @@ for (disease in dis_list[1:3]) {
       res.cox.pc10[[clock]][[disease]] <- coxph(model_formula_pc10, data = final_data[final_data$sex==0,])
       res.cox.pc11[[clock]][[disease]] <- coxph(model_formula_pc11, data = final_data[final_data$sex==0,])
 
+      #Calculate the level of evidence that WBC composition has an effect on the outcome, both with and without the clocks. --Thomas
+      fit1 <- coxph(model_formula_raw, data = final_data)
+      fit2 <- coxph(model_formula_pc1.11, data = final_data)
+      res.an[[clock]][[disease]] <- anova(fit1, fit2, test = "LRT")$`Pr(>|Chi|)`[2]
+      
+      fit1 <- coxph(model_formula_clock, data = final_data)
+      fit2 <- coxph(model_formula_clock.pc1.11, data = final_data)
+      res.an.clocks[[clock]][[disease]] <- anova(fit1, fit2, test = "LRT")$`Pr(>|Chi|)`[2]
     }
   } else {
     # Case 3: prop_F greater than or equal to 0.9
@@ -325,6 +342,9 @@ for (disease in dis_list[1:3]) {
       model_formula_clock.pc1.9 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9"))
       model_formula_clock.pc1.10 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10"))
       model_formula_clock.pc1.11 <- as.formula(paste0("Surv(t_event, event) ~ scale(", clock, ") + age + bmi + years + pack_years + units + rank + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10 + PC11"))
+      
+      model_formula_raw <- as.formula(paste0("Surv(t_event, event) ~ age + bmi + years + pack_years + units + rank"))
+      model_formula_pc1.11 <- as.formula(paste0("Surv(t_event, event) ~ PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10 + PC11 + age + bmi + years + pack_years + units + rank"))
       
       model_formula_pc1 <- as.formula(paste0("Surv(t_event, event) ~ PC1 + age + bmi + years + pack_years + units + rank"))
       model_formula_pc2 <- as.formula(paste0("Surv(t_event, event) ~ PC2 + age + bmi + years + pack_years + units + rank"))
@@ -364,6 +384,15 @@ for (disease in dis_list[1:3]) {
       res.cox.pc9[[clock]][[disease]] <- coxph(model_formula_pc9, data = final_data[final_data$sex==1,])
       res.cox.pc10[[clock]][[disease]] <- coxph(model_formula_pc10, data = final_data[final_data$sex==1,])
       res.cox.pc11[[clock]][[disease]] <- coxph(model_formula_pc11, data = final_data[final_data$sex==1,])
+      
+      #Calculate the level of evidence that WBC composition has an effect on the outcome, both with and without the clocks. --Thomas
+      fit1 <- coxph(model_formula_raw, data = final_data)
+      fit2 <- coxph(model_formula_pc1.11, data = final_data)
+      res.an[[clock]][[disease]] <- anova(fit1, fit2, test = "LRT")$`Pr(>|Chi|)`[2]
+      
+      fit1 <- coxph(model_formula_clock, data = final_data)
+      fit2 <- coxph(model_formula_clock.pc1.11, data = final_data)
+      res.an.clocks[[clock]][[disease]] <- anova(fit1, fit2, test = "LRT")$`Pr(>|Chi|)`[2]
 
     }
   }
@@ -537,4 +566,4 @@ all_results <- do.call(rbind, lapply(names(results_list), function(tag) {
 
 # Please change file path. --Thomas
 save(all_results, file = "/file_path/Disease_Results.rda")
-save(res.an.clocks, file = "/file_path/clock_WBC_LRT.rda")
+save(res.an, res.an.clocks, file = "/file_path/clock_WBC_LRT.rda")
