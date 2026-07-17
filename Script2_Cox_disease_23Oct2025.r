@@ -566,4 +566,7 @@ all_results <- do.call(rbind, lapply(names(results_list), function(tag) {
 
 # Please change file path. --Thomas
 save(all_results, file = "/file_path/Disease_Results.rda")
-save(res.an, res.an.clocks, file = "/file_path/clock_WBC_LRT.rda")
+
+save(res.an, file = "/file_path/WBC_LRT.rda")
+save(res.an.clocks, file = "/file_path/clock_WBC_LRT.rda")
+
