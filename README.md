@@ -23,5 +23,5 @@ Cox regerssion analyses for each clock/disease pairing. We consider diagnoses ma
 As per scripts 2 and 3 but, instead of disease outcomes, we consider all-cause mortality.
 
 **Script5_analyse_results.Rmd** <br>
-Analyses the results obtained from Scripts 1-4 and makes figures for the manuscript. This script has also been knitted into an HTML-file to allow closer inspection of which data and scripts generated which figure.
+Analyses the results obtained from Scripts 1-4 and makes figures for the manuscript. This script has also been knitted into an [HTML-file](https://thomasjonkmanlumc.github.io/FORK_Epigenetic_Clocks_and_Disease_GS/Knitted%20scripts/Script5_analyse_results.html) to allow closer inspection of which data and scripts generated which figure.
 
