@@ -5,7 +5,7 @@
  [Jonkman et al. (current scripts)](https://pmc.ncbi.nlm.nih.gov/articles/PMC12132128/) <br>
  [Mavrommatis et al. (original script source)](https://www.nature.com/articles/s41467-025-66106-y)
 
-Only a subset of the original repo's scripts were run here:
+Only a subset of the original repo's scripts (scripts 1, 1a, 2, and 4) were run here. One additional script (Script 0) was added to the start of the pipeline.
 
 **Script0_zhang_clock.r** <br>
 Calculates the [Zhang clock](https://pmc.ncbi.nlm.nih.gov/articles/PMC6708158/) to match Mavrommatis et al.'s methods with our own.
