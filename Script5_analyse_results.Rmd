@@ -1,0 +1,310 @@
+---
+title: "Gen Scotland: epigenetic clocks / cell composition PCs and health outcomes"
+output: html_document
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+In this script, the results of Scripts 1-4 will be analysed, and several figures will be made to show whether epigenetic clocks and/or cell composition PCs associate with health outcomes:
+
+- The correlations of the cell composition PCs with the individual cell counts from which they were constructed. These should be comparable to the correlations observed in the manuscript.
+- A series of boxplots showing the -log10(p-value) of the effect of cell composition on disease hazard. This only shows the global effect of cell composition, and gives no information about individual cell comoposition PCs. Here, we find that 12 health outcomes are affected by cell composition, including all-cause mortality. We will continue with these 12 diseases in further figures.
+ - A heatmap showing the Z-score of all cell composition PCs, including significance stars, as a metric of their effect on each of the 12 health outcomes. This shows which PCs are associated with each disease.
+- A scatterplot of the effect of epigenetic clocks on health outcomes, before and after adjustment for cell composition PCs. This shows whether the epigenetic clocks' associations with health outcomes is dependent on cell composition or not.
+
+# Setup
+
+Load results.
+```{r}
+setwd("/exports/molepi/RSC_BIOS/Users/tjonkman/cellcounts/test/FORK_Epigenetic_Clocks_and_Disease_GS")
+.libPaths("/exports/molepi/RSC_BIOS/Users/tjonkman/Packages/4.3.1")
+
+#Load mortality results.
+load("/exports/molepi/RSC_BIOS/Users/tjonkman/cellcounts/test/FORK_Epigenetic_Clocks_and_Disease_GS/Mortality_results_2.rda")
+m <- all_results
+
+#Load disease results.
+load("/exports/molepi/RSC_BIOS/Users/tjonkman/cellcounts/test/FORK_Epigenetic_Clocks_and_Disease_GS/Disease_Results_2.rda")
+d <- all_results
+```
+
+Merge mortality and disease results. Keep the clock results (including clock+PC-adjustment) and the PC results separate.
+```{r}
+#Separate disease results into clocks (dc) and cell composition PCs (dp).
+dc <- d[grep("clocks", d$model), c("Clock", "disease", "HR", "LCI", "UCI", "Z", "P", "model")]
+
+dp <- d[-grep("clocks", d$model), ]
+dp <- dp[dp$Clock == "Hannum",]
+dp <- dp[, c("disease", "HR", "LCI", "UCI", "Z", "P", "model")]
+dp$model <- gsub(pattern = "pc", replacement = "PC", x = dp$model)
+
+#Separate mortality results into clocks (dc) and cell composition PCs (dp).
+mc <- do.call("rbind", m[1:12])
+mc$disease <- "mortality"
+mc$model <- paste0("clocks", c(rep("", 6), rep(".pc1", 6), rep(".pc1.2", 6), rep(".pc1.3", 6), rep(".pc1.4", 6), rep(".pc1.5", 6), rep(".pc1.6", 6), rep(".pc1.7", 6), rep(".pc1.8", 6), rep(".pc1.9", 6), rep(".pc1.10", 6), rep(".pc1.11", 6)))
+mc <- mc[, c("Clock", "disease", "HR", "LCI", "UCI", "Z", "P", "model")]
+mp <- m[[13]]
+
+mp$disease <- "mortality"
+mp$model <- mp$PC
+mp <- mp[, c("disease", "HR", "LCI", "UCI", "Z", "P", "model")]
+
+head(dc) #disease effects of clocks and clocks+cell composition PCs.
+head(mc) #mortality effects of clocks and clocks+cell composition PCs.
+head(dp) #disease effects of composition PCs alone.
+head(mp) #mortality effects of composition PCs alone.
+
+#Add disease group annotation.
+dis.info <- read.csv("combined_disease_names_and_groups.csv", header = T)
+rownames(dis.info) <- dis.info$name
+head(dis.info)
+
+#Merge clock results.
+d <- as.data.frame(rbind(mc, dc))
+d$Clock <- factor(d$Clock, levels = c("Hannum", "Horvathv1", "Zhang_Acc", "PhenoAge", "DNAmGrimAge.1", "DunedinPACE"))
+levels(d$Clock) <- c("Hannum", "Horvath", "Zhang", "PhenoAge", "GrimAge", "DunedinPACE")
+d$group <- dis.info$Group[match(d$disease, dis.info$name)]
+d$group[d$disease == "mortality"] <- "Mortality"
+# d$group <- factor(d$group, levels = unique(d$group))
+d$group <- factor(d$group, levels = c("Mortality", "Cardiovascular", "Endocrine", "Digestive", "Benign neoplasm or Carcinoma in situ", "Cancers", "Haematological or immunological", "Infections", "Musculoskeletal", "Neurological", "Psychiatric", "Respiratory", "Skin", "Genitourinary", "Eye", "Ear"))
+levels(d$group)[c(5,7)] <- c("Benign neoplasms/CIS", "Haematological")
+d <- d[order(d$group, d$Clock),]
+d$disease <- factor(d$disease, levels = unique(d$disease))
+d$model <- factor(d$model, levels = unique(d$model))
+d <- d[order(d$group, d$Clock, d$disease, d$model),]
+head(d)
+
+#Merge PC results.
+d2 <- as.data.frame(rbind(mp, dp))
+d2$group <- dis.info$Group[match(d2$disease, dis.info$name)]
+d2$group[d2$disease == "mortality"] <- "Mortality"
+# d2$group <- factor(d2$group, levels = unique(d2$group))
+d2$group <- factor(d2$group, levels = c("Mortality", "Cardiovascular", "Endocrine", "Digestive", "Benign neoplasm or Carcinoma in situ", "Cancers", "Haematological or immunological", "Infections", "Musculoskeletal", "Neurological", "Psychiatric", "Respiratory", "Skin", "Genitourinary", "Eye", "Ear"))
+levels(d2$group)[c(5,7)] <- c("Benign neoplasms/CIS", "Haematological")
+
+d2 <- d2[order(d2$group),]
+d2$disease <- factor(d2$disease, levels = unique(d2$disease))
+d2$model <- factor(d2$model, levels = unique(d2$model))
+
+d2$PC <- d2$model
+pc.labs <- c("PC1: Neutrophils", "PC2: T cell naive/memory", "PC3: Treg/CD4Tmem", "PC4: Bmem/Mono", "PC5: Bnv/Eos", "PC6: Naive CD8 T cells", "PC7: Mixed (CD4Tnv/CD8Tnv)", "PC8: Eos/Mono", "PC9: Mixed (CD4Tnv+CD8Tmem)", "PC10: Mixed (Bmem)", "PC11: Mixed (Baso)")
+levels(d2$PC) <- pc.labs
+
+d2 <- d2[order(d2$group, d2$disease, d2$model),]
+head(d2)
+```
+
+As a sanity check, plot the correlations between cell composition PCs and individual cell counts, to ensure these look similar to our own cohort.
+```{r, fig.width = 4, fig.height = 3.2, dpi = 300}
+corr.pcs <- readRDS("/exports/molepi/RSC_BIOS/Users/tjonkman/cellcounts/test/FORK_Epigenetic_Clocks_and_Disease_GS/WBC_PC_correlations_2.RDS")
+celltypes <- c("Neutrophils", "Eosinophils", "Basophils", "Monocytes", "Naive B cells", "Memory B cells", "Naive CD4 T cells", "Memory CD4 T cells", "Naive CD8 T cells", "Memory CD8 T cells", "Regulatory T cells", "Natural Killer cells")
+rownames(corr.pcs) <- celltypes
+head(corr.pcs)
+
+library(reshape2)
+library(ggplot2)
+library(ggpubr)
+plot.theme <- list(
+  geom_point(shape = 1),
+  geom_smooth(method = "lm"),
+  stat_cor(method = "pearson", cor.coef.name = "R", label.x = -Inf, label.y = 105, hjust = 0, vjust = 0.7, size = 3.5, r.digits = 1, label.sep = ",  "),
+  facet_wrap(facets = vars(cell.type)),
+  theme_bw(),
+  theme(strip.text = element_text(size = 10)),
+  scale_y_continuous(limits = c(-10, 105), breaks = seq(-25, 100, 25))
+)
+
+#Correlations between PCs and cell counts.
+corr.pcs <- t(corr.pcs)[1:11,]
+
+corr.pcs <- melt(corr.pcs, varnames = c("PC", "cell.type"), value.name = "Correlation")
+corr.pcs$cell.type <- factor(corr.pcs$cell.type, levels = rev(levels(corr.pcs$cell.type)))
+
+ggplot(corr.pcs, aes(x = PC, y = cell.type, fill = Correlation)) +
+  geom_tile() +
+  geom_text(aes(label = format(round(Correlation, 1), digits = 1)), vjust = 0.5, hjust = 0.5, size = 2.5) +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red",
+                       midpoint = 0, limit = c(-1, 1)) +
+  labs(x = NULL, y = NULL) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  guides(fill = "none")
+```
+
+# Plot results
+
+Inspect mortality results of PCs alone.
+```{r, fig.width = 4.4, fig.height = 4.3, dpi = 300}
+m$an.raw[1] #The evidence that cell counts predict mortality. NB: not dependent on clock, so only the first clock is shown.
+m$an.clocks #The evidence that addition of cell counts improves the mortality prediction of the model. Significant for all clocks, especially cc-independent clocks (horvath and zhang).
+```
+
+Inspect disease results
+```{r, fig.width = 10, fig.height = 8, dpi = 300}
+#Load the evidence of a cell count effect for each clock.
+load("/exports/molepi/RSC_BIOS/Users/tjonkman/cellcounts/test/FORK_Epigenetic_Clocks_and_Disease_GS/WBC_LRT_2.rda")
+
+#Select only one clock; the results are identical for each clock.
+res.an <- res.an$Hannum
+
+#Create a full list of outcomes that are bonferroni-significantly celltype-dependent for at least 1 disease.
+x <- as.data.frame(do.call("rbind", res.an))
+disease.list <- rownames(x)[which(x$V1 < 0.05/175)]
+full.list <- c("mortality", disease.list)
+full.list #12 outcomes
+```
+
+Make boxplots for the LRT p-values. This will show, per health outcome, the level of evidence that cell composition is predictive of the outcome's hazard. 176 outcomes will be tested, and outcomes that have a Bonferroni-significant association will be labeled.
+```{r, fig.width = 6, fig.height = 4, dpi = 300}
+l <- as.data.frame(do.call("cbind", res.an))
+l$mortality <- m$an.raw$Hannum
+l <- as.data.frame(t(l))
+colnames(l) <- "p"
+l$disease <- rownames(l)
+l$group <- d2$group[match(l$disease, d2$disease)]
+l$p <- -log10(l$p)
+head(l)
+
+threshold <- -log10(0.05/175)
+l2 <- subset(l, p > threshold)
+
+ggplot(l, aes(x = group, y = p, color = group)) + 
+  geom_abline(intercept = threshold, slope = 0, linetype = "dashed", alpha = 0.5) +
+  geom_point(size = 1) +
+  geom_boxplot(data = subset(l, group != "Mortality"), width = 0.5, outliers = F) +
+  geom_text(
+    data = l2,
+    aes(label = disease),
+    hjust = 0,
+    vjust = 0,
+    size = 3,
+    color = "black",
+    show.legend = FALSE, 
+    nudge_x = 0.15, nudge_y = c(0, 0, 0, 0, 0, 0, 0, 0, 0.25, 0, 0, 0)
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(size = 8, angle = 45, hjust = 1),
+        panel.grid.major.x = element_blank(),
+        legend.key.size = unit(0.5, "cm"),
+        legend.text = element_text(size = 8)) +
+  labs(x = "Outcome", y = "-log10(P-value) of cc effect")
+```
+
+Make a heatmap of the Z-scores per PC-outcome association for the 12 diseases that showed up in the boxplots above. This shows the level of evidence that each individual cell composition PC (rather than the aggregate effect of all cell counts) is predictive of the health outcome.
+```{r, fig.width = 6, fig.height = 4, dpi = 300}
+library(reshape2)
+x <- d2[d2$disease %in% full.list, ]
+x$PC <- factor(x$PC, levels = rev(levels(x$PC)))
+x$sig.star <- factor("", levels = c("", "*", "**", "***"))
+x$sig.star[x$P < 0.01] <- "*"
+x$sig.star[x$P < 0.001] <- "**"
+x$sig.star[x$P < 0.0001] <- "***"
+head(x)
+
+ggplot(x, aes(x = disease, y = PC, fill = Z, label = sig.star)) +
+  geom_tile() +
+  scale_fill_gradientn(
+    colors = c("#08519C", "#2171B5", "white", "#CB181D", "#A50F15"),
+    limits = c(-11, 11)
+  ) +
+  geom_text(size = 3) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Outcome", y = "PC", fill = "Z-score")
+```
+
+Finally, make a scatterplot of the effect size of epigenetic clocks on health outcomes, before and after adjustment for cell composition PCs. This shows whether the clock effect may have been driven by underlying cell composition effects. If the line between X (unadjusted) and Y (cell composition adjusted) is not equal to X=Y, tested by ANOVA, we conclude that cell composition affects the clock's associations with health outcomes.
+```{r, fig.width = 9, fig.height = 4.5, dpi = 300}
+#Load disease information.
+dis.info <- read.csv("combined_disease_names_and_groups.csv", header = T)
+head(dis.info[order(dis.info$Group),])
+
+raw <- d[d$model == "clocks",] #Raw clock effects without PC-adjustment.
+adj <- d[d$model == "clocks.pc1.11",] #PC-adjusted effects.
+
+#Merged outcome data.
+outc <- data.frame(
+  clock = raw$Clock,
+  outcome = raw$disease,
+  raw = raw$HR,
+  adj = adj$HR, 
+  diff = adj$HR - raw$HR
+)
+outc$group <- dis.info[match(outc$outcome, dis.info$name),"Group"]
+outc$group[outc$outcome == "mortality"] <- "Mortality"
+outc$clock = factor(outc$clock, levels = c("Hannum", "Horvath", "Zhang", "PhenoAge", "GrimAge", "DunedinPACE"))
+outc$outcome <- factor(outc$outcome, levels = unique(outc$outcome))
+
+#Re-order data based on outcome group.
+outc$group <- factor(outc$group, levels = c("Mortality", "Cardiovascular", "Endocrine", "Digestive", "Benign neoplasm or Carcinoma in situ", "Cancers", "Haematological or immunological", "Infections", "Musculoskeletal", "Neurological", "Psychiatric", "Respiratory", "Skin", "Genitourinary", "Eye", "Ear"))
+levels(outc$group)[c(5,7)] <- c("Benign neoplasms/CIS", "Haematological")
+outc <- outc[order(outc$group),]
+outc$outcome <- factor(outc$outcome, levels = unique(outc$outcome))
+
+#Define some interesting diseases whose names to plot on top of the scatterplot.
+lab.data <- subset(outc, outc$outcome %in% rownames(l2))
+lab.data$hjust <- ifelse(lab.data$raw < 1, 1, 0)
+head(lab.data)
+dim(lab.data)
+
+#Add data on whether the regression line between the adjusted and raw HRs is significantly different from x=y.
+reg.an <- data.frame(
+  clock = factor(levels(outc$clock), levels = levels(outc$clock)),
+  p = NaN
+)
+for(i in 1:6){
+  x <- outc[outc$clock == levels(outc$clock)[i],]
+  reg.an$p[i] <- anova(lm(adj ~ offset(raw), data = x), 
+                     lm(adj ~ raw, data = x))$`Pr(>F)`[2]
+}
+reg.an$p.label <- ifelse(
+  reg.an$p < 1e-3,
+  paste0("p: ", formatC(reg.an$p, format = "e", digits = 2)),
+  paste0("p: ", formatC(reg.an$p, format = "f", digits = 3))
+)
+reg.an
+
+#Define x and y axis limits.
+x <- c(outc$raw, outc$adj)
+lims <- c(min(x), max(x))
+
+#Plot the labeled outcomes in front.
+outc2 <- outc[order(outc$outcome %in% rownames(l2)),]
+head(outc2)
+
+library(ggpmisc)
+library(ggrepel)
+set.seed(4)
+p <- ggplot(outc2, aes(x = raw, y = adj, color = group)) + 
+  geom_abline(intercept = 0, slope = 1, alpha = 0.3, linetype = "dashed") +
+  geom_hline(yintercept = 1, alpha = 0.2, linetype = "dashed") +
+  geom_vline(xintercept = 1, alpha = 0.2, linetype = "dashed") +
+  geom_point(size = 0.75, alpha = 1) +
+  geom_smooth(method = "lm", mapping = aes(group = 1), color = scales::alpha("black", 0.5), linewidth = 0.5, alpha = 0) +
+  stat_poly_eq(aes(group = 1, label = after_stat(eq.label)), coef.digits = 2, size = 3) +
+  geom_text(data = reg.an, aes(x = 0.58, y = 1.75, label = p.label), inherit.aes = FALSE, hjust = 0, size = 3) +
+  geom_text_repel(
+    data = lab.data,
+    aes(label = outcome),
+    size = 2,
+    color = "black",
+    show.legend = FALSE,
+    max.overlaps = Inf,
+    segment.size = 0.1,
+    force = 5,
+    box.padding = 0.3,
+    min.segment.length = 0
+  ) +
+  facet_wrap(vars(clock), scales = "free") +
+  theme_bw() +
+  labs(x = "Clock HR", y = "Clock HR after cc adjustment") +
+  scale_x_continuous(limits = lims, transform = "log2", breaks = c(0.5, 0.7, 1, 1.4, 2)) +
+  scale_y_continuous(limits = lims, transform = "log2", breaks = c(0.5, 0.7, 1, 1.4, 2))
+
+suppressWarnings(p)
+```
+
+We conclude that cell composition indeed has effects on several disease hazards, including all-cause mortality. Cell composition also significantly drives the association between epigenetic clocks and health outcomes, although this effect is minor.

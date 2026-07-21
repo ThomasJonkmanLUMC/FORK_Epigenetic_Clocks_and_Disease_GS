@@ -22,3 +22,6 @@ Cox regerssion analyses for each clock/disease pairing. We consider diagnoses ma
 **Script4_mortality_Cox_AUC_25Aug2025.r** <br>
 As per scripts 2 and 3 but, instead of disease outcomes, we consider all-cause mortality.
 
+**Script5_analyse_results.Rmd** <br>
+Analyses the results obtained from Scripts 1-4 and makes figures for the manuscript. This script has also been knitted into an HTML-file to allow closer inspection of which data and scripts generated which figure.
+
